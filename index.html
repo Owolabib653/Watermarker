@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="PixelGuard is a fast, private batch watermarking studio for creators and teams.">
+  <title>PixelGuard — Professional Watermark Studio</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="header-brand">
+      <div class="brand-icon"><span>✦</span></div>
+      <div>
+        <h1>PixelGuard <span class="pro-badge">PRO</span></h1>
+        <p>Professional image protection, built for your workflow</p>
+      </div>
+    </div>
+    <div class="header-meta">
+      <span class="privacy-note"><span class="status-dot"></span> Files stay on your device</span>
+      <button class="header-help" type="button" title="PixelGuard help">?</button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <!-- Sidebar Control Panel -->
+    <aside class="sidebar">
+      <div class="sidebar-intro">
+        <span class="eyebrow">WORKSPACE</span>
+        <h2>Protect your work</h2>
+        <p>Set your brand once, then apply it to every asset in seconds.</p>
+      </div>
+      <div class="panel-section">
+        <h3><span class="step-number">01</span> Assets & Watermark</h3>
+        <div class="control-group">
+          <label>Base Pictures (20+ supported)</label>
+          <div class="file-dropzone">
+            <input type="file" id="baseInputs" accept="image/*" multiple>
+            <div class="dropzone-label">📁 Choose or Drop Images</div>
+            <div class="dropzone-sub">Select multiple files at once</div>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label>Watermark Type</label>
+          <div class="btn-row">
+            <button type="button" class="btn btn-secondary wm-type-btn active" data-type="image">🖼️ Logo</button>
+            <button type="button" class="btn btn-secondary wm-type-btn" data-type="text">🔤 Text</button>
+          </div>
+        </div>
+
+        <div id="wmImageControls">
+          <div class="control-group">
+            <label>Watermark Logo (PNG)</label>
+            <div class="file-dropzone" style="border-style: solid; background: #fff;">
+              <input type="file" id="wmInput" accept="image/png">
+              <div class="dropzone-label" id="wmFilename">🖼️ Choose Watermark PNG</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="wmTextControls" style="display:none; flex-direction:column; gap:12px;">
+          <div class="control-group">
+            <label>Watermark Text</label>
+            <input type="text" id="wmText" value="© Your Brand">
+          </div>
+          <div class="control-group">
+            <label>Font</label>
+            <select id="wmFont">
+              <option value="Arial">Arial</option>
+              <option value="Georgia">Georgia</option>
+              <option value="'Times New Roman', serif">Times New Roman</option>
+              <option value="'Courier New', monospace">Courier New</option>
+              <option value="Verdana">Verdana</option>
+              <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+              <option value="Impact">Impact</option>
+            </select>
+          </div>
+          <div class="control-group" style="flex-direction:row; align-items:center; gap:14px;">
+            <input type="color" id="wmColor" value="#ffffff">
+            <label class="checkbox-row"><input type="checkbox" id="wmBold" checked>Bold</label>
+            <label class="checkbox-row"><input type="checkbox" id="wmItalic">Italic</label>
+          </div>
+          <div class="control-group">
+            <label>Stroke <span><span id="wmStrokeWidthVal">0</span>px</span></label>
+            <input type="range" id="wmStrokeWidth" min="0" max="12" step="1" value="0">
+            <input type="color" id="wmStrokeColor" value="#000000" aria-label="Text stroke color">
+          </div>
+          <div class="control-group">
+            <label>Shadow blur <span><span id="wmShadowBlurVal">0</span>px</span></label>
+            <input type="range" id="wmShadowBlur" min="0" max="40" step="1" value="0">
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3><span class="step-number">02</span> Global Adjustments</h3>
+        <div class="control-group">
+          <label>Opacity <span><span id="opacityVal">0.75</span></span></label>
+          <input type="range" id="opacity" min="0.1" max="1" step="0.05" value="0.75">
+        </div>
+        <div class="control-group">
+          <label>Scale <span><span id="scaleVal">25</span>%</span></label>
+          <input type="range" id="scale" min="5" max="80" step="1" value="25">
+        </div>
+        <div class="control-group">
+          <label>Rotation <span><span id="rotationVal">0</span>°</span></label>
+          <input type="range" id="rotation" min="-180" max="180" step="1" value="0">
+        </div>
+        <div class="control-group">
+          <label>Alignment Preset</label>
+          <select id="presetPos">
+            <option value="bottom-right" selected>Bottom-Right Corner</option>
+            <option value="bottom-left">Bottom-Left Corner</option>
+            <option value="top-right">Top-Right Corner</option>
+            <option value="top-left">Top-Left Corner</option>
+            <option value="center">Center of Image</option>
+          </select>
+        </div>
+        <div class="control-group" style="flex-direction:row; align-items:center; justify-content:space-between;">
+          <label style="margin:0;">Tile Watermark (repeat pattern)</label>
+          <input type="checkbox" id="tileMode" style="width:auto;">
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3><span class="step-number">03</span> Output Settings</h3>
+        <div class="control-group">
+          <label>File Format</label>
+          <select id="outputFormat">
+            <option value="png">PNG (lossless)</option>
+            <option value="jpeg">JPEG (smaller files)</option>
+            <option value="webp">WebP (modern web)</option>
+            <option value="avif">AVIF (smallest files)</option>
+          </select>
+        </div>
+        <div class="control-group" id="qualityGroup" style="display:none;">
+          <label>JPEG Quality <span><span id="qualityVal">85</span>%</span></label>
+          <input type="range" id="jpegQuality" min="10" max="100" step="5" value="85">
+        </div>
+        <div class="control-group">
+          <label>Filename Prefix</label>
+          <input type="text" id="filenamePrefix" value="watermarked">
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3><span class="step-number">04</span> Presets</h3>
+        <div class="control-group">
+          <label>Save Current Settings</label>
+          <div class="btn-row">
+            <input type="text" id="presetNameInput" placeholder="Preset name">
+            <button id="savePresetBtn" class="btn btn-secondary btn-icon">💾</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <label>Load / Delete Preset</label>
+          <div class="btn-row">
+            <select id="presetSelect"><option value="">-- Select a preset --</option></select>
+            <button id="deletePresetBtn" class="btn btn-secondary btn-icon" style="color:var(--danger);">🗑️</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <button id="applyAllBtn" class="btn" disabled>Apply to All Images</button>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Dashboard -->
+    <main class="dashboard">
+      <div class="workspace-heading">
+        <div>
+          <span class="eyebrow">BATCH STUDIO</span>
+          <h2>Watermark your images</h2>
+        </div>
+        <div class="secure-pill">🔒 Private by design</div>
+      </div>
+      <div class="insight-grid">
+        <div class="insight-card"><span class="insight-icon purple">↗</span><div><strong>Batch ready</strong><span>Process 20+ assets at once</span></div></div>
+        <div class="insight-card"><span class="insight-icon teal">◈</span><div><strong>Pixel perfect</strong><span>Full-resolution exports</span></div></div>
+        <div class="insight-card"><span class="insight-icon amber">✓</span><div><strong>100% private</strong><span>No uploads, no tracking</span></div></div>
+      </div>
+      <div class="toolbar">
+        <div class="stats-badge" id="statsText">0 images loaded</div>
+        <div class="toolbar-actions">
+          <button id="clearAllBtn" class="btn btn-secondary" style="width: auto; padding: 8px 16px;" disabled>Clear All</button>
+          <button id="downloadAllBtn" class="btn btn-success" style="width: auto; padding: 8px 20px;" disabled>📥 Download All (ZIP)</button>
+        </div>
+        <div class="progress-wrap" id="progressWrap">
+          <div class="progress-bar-track"><div class="progress-bar-fill" id="progressFill"></div></div>
+          <div class="progress-text" id="progressText">Processing 0/0...</div>
+        </div>
+      </div>
+
+      <div class="gallery-grid" id="galleryGrid">
+        <div class="empty-state">
+          <div class="empty-icon">✦</div>
+          <h3>Your canvas is ready</h3>
+          <p>Drop your product shots, portfolio images, or social content here to get started.</p>
+          <label class="empty-upload-btn" for="baseInputs">Choose images <span>→</span></label>
+          <div class="empty-hint">JPG, PNG, WEBP supported · processed locally</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Detailed Review Modal -->
+  <div class="modal-overlay" id="reviewModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalTitle">Review & Fine-tune Watermark</h2>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-canvas-wrapper">
+          <canvas id="modalCanvas"></canvas>
+        </div>
+        <div class="modal-sidebar">
+          <div class="panel-section" style="border:none; padding:0;">
+            <h3>Fine-tune Image</h3>
+            <div class="control-group">
+              <label>Opacity <span><span id="mOpacityVal">0.75</span></span></label>
+              <input type="range" id="mOpacity" min="0.1" max="1" step="0.05" value="0.75">
+            </div>
+            <div class="control-group">
+              <label>Scale <span><span id="mScaleVal">25</span>%</span></label>
+              <input type="range" id="mScale" min="5" max="80" step="1" value="25">
+            </div>
+            <div class="control-group">
+              <label>Rotation <span><span id="mRotationVal">0</span>°</span></label>
+              <input type="range" id="mRotation" min="-180" max="180" step="1" value="0">
+            </div>
+            <div class="control-group">
+              <label>Alignment Preset</label>
+              <select id="mPresetPos">
+                <option value="bottom-right">Bottom-Right Corner</option>
+                <option value="bottom-left">Bottom-Left Corner</option>
+                <option value="top-right">Top-Right Corner</option>
+                <option value="top-left">Top-Left Corner</option>
+                <option value="center">Center of Image</option>
+                <option value="custom">Custom (Interactive Drag)</option>
+              </select>
+            </div>
+            <div class="control-group" style="flex-direction:row; align-items:center; justify-content:space-between;">
+              <label style="margin:0;">Tile Watermark</label>
+              <input type="checkbox" id="mTile" style="width:auto;">
+            </div>
+          </div>
+          <p style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;">💡 Drag inside the box to move it. Drag the corner handle to resize. Works with mouse or touch.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="modalResetBtn" class="btn btn-secondary" style="width: auto; padding: 8px 16px; font-size: 0.85rem;">Reset to Global</button>
+        <button id="modalSaveBtn" class="btn" style="width: auto; padding: 8px 24px; font-size: 0.9rem;">Done / Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="helpModal" aria-hidden="true">
+    <div class="modal help-modal">
+      <div class="modal-header">
+        <div><span class="eyebrow">PIXELGUARD GUIDE</span><h2>Work faster, stay private</h2></div>
+        <button class="modal-close" id="helpClose" aria-label="Close help">&times;</button>
+      </div>
+      <div class="help-content">
+        <div class="help-item"><strong>1. Add your assets</strong><span>Drop images anywhere in the workspace or choose them from your device.</span></div>
+        <div class="help-item"><strong>2. Set your brand layer</strong><span>Use a logo or text watermark, then adjust opacity, scale, position, stroke, and shadow.</span></div>
+        <div class="help-item"><strong>3. Review and export</strong><span>Fine-tune individual images, choose PNG, JPEG, WebP, or AVIF, and download a ZIP.</span></div>
+        <div class="help-item"><strong>Limits & privacy</strong><span>Files are processed locally in your browser. Nothing is uploaded, tracked, or retained by PixelGuard.</span></div>
+        <p class="help-shortcuts"><kbd>Esc</kbd> closes dialogs · <kbd>Drop</kbd> anywhere to upload · Best results under 100 MB per image</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="vendor/jszip.min.js"></script>
+  <script src="vendor/FileSaver.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
