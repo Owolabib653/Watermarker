@@ -1,24 +1,25 @@
 # PixelGuard
 
-PixelGuard is a zero-config, client-side watermark studio for creators and teams. It runs as a static site and processes images locally in the browser.
+PixelGuard is a React + Vite, client-side watermark studio for creators and teams. It processes images locally in the browser.
 
 ## Features
 
 - Batch logo or text watermarking with PNG, JPEG, WebP, and AVIF export.
 - Dynamic text tokens: `{filename}`, `{year}`, `{date}`, and `{index}`.
-- Cached thumbnails, object URL memory cleanup, global drag-and-drop, and non-blocking batch packaging.
+- Native bitmap previews, object URL memory cleanup, global drag-and-drop, and worker-backed batch rendering.
 - Per-image interactive positioning with boundary locking and aspect-ratio-safe logo scaling.
 - No uploads, telemetry, or server runtime required.
 
 ## Run locally
 
-Serve the project directory with any static server, then open `index.html`. For example:
+Install dependencies and start the Vite development server:
 
 ```bash
-npx serve .
+npm install
+npm run dev
 ```
 
-The same directory can be deployed to Vercel, Netlify, Cloudflare Pages, GitHub Pages, or any static host. The ZIP and FileSaver dependencies are vendored in `vendor/`, so the app works offline after the initial download.
+The production bundle is generated with `npm run build` and can be deployed to Vercel, Netlify, Cloudflare Pages, GitHub Pages, or any static host.
 
 ## Browser support
 
@@ -30,4 +31,4 @@ Set `config.enablePaywall` in `app.js` to `true`, adjust `freeExportLimit`, and 
 
 ## Architecture
 
-`index.html` contains the static shell, `styles.css` contains the responsive product UI, and `app.js` owns state, Canvas rendering, downloads, and local persistence. `vendor/` contains pinned local copies of JSZip and FileSaver.
+`src/App.jsx` owns the React state and workflow, `src/styles.css` contains the responsive product UI, and `src/export.worker.js` renders full-resolution exports off the main thread. `fflate` packages ZIP downloads without the legacy JSZip runtime.
