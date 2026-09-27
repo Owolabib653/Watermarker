@@ -13,16 +13,14 @@ function drawMark(ctx, canvas, item, watermark, text) {
   const width = item.scale / 100 * canvas.width;
   const height = hasImage ? watermark.height / watermark.width * width : width * 0.16;
   const pad = canvas.width * 0.03;
-  let x = canvas.width - width - pad;
-  let y = canvas.height - height - pad;
+  let x, y;
   if (item.position === 'custom' && item.customPosition) {
     x = item.customPosition.x * canvas.width - width / 2;
     y = item.customPosition.y * canvas.height - height / 2;
+  } else {
+    x = item.position.includes('left') ? pad : item.position.includes('right') ? canvas.width - width - pad : (canvas.width - width) / 2;
+    y = item.position.includes('top') ? pad : item.position.includes('bottom') ? canvas.height - height - pad : (canvas.height - height) / 2;
   }
-  if (item.position === 'top-left') [x, y] = [pad, pad];
-  if (item.position === 'top-right') y = pad;
-  if (item.position === 'bottom-left') x = pad;
-  if (item.position === 'center') [x, y] = [(canvas.width - width) / 2, (canvas.height - height) / 2];
   const paint = (px, py) => {
     ctx.save();
     ctx.translate(px + width / 2, py + height / 2);
@@ -58,7 +56,18 @@ self.onmessage = async ({ data }) => {
     if (outputFormat === 'jpeg') { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
     ctx.drawImage(source, 0, 0);
     drawMark(ctx, canvas, item, watermark, item.text);
-    const blob = await canvas.convertToBlob({ type: `image/${outputFormat}`, quality });
+    
+    let blob = await canvas.convertToBlob({ type: `image/${outputFormat}`, quality });
+    
+    if (outputFormat !== 'png') {
+      const maxSize = file.size * 1.05;
+      let currentQuality = quality;
+      while (blob.size > maxSize && currentQuality > 0.1) {
+        currentQuality -= 0.05;
+        blob = await canvas.convertToBlob({ type: `image/${outputFormat}`, quality: currentQuality });
+      }
+    }
+
     self.postMessage({ id: item.id, blob });
   } catch (error) {
     self.postMessage({ id: data.item.id, error: error.message });

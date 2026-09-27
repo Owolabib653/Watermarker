@@ -6,7 +6,7 @@ const positions = [
   ['bottom-right', 'Bottom-right'], ['bottom-center', 'Bottom-center'], ['bottom-left', 'Bottom-left'], ['top-right', 'Top-right'], ['top-center', 'Top-center'], ['top-left', 'Top-left'], ['center', 'Center'], ['custom', 'Custom position']
 ];
 const defaultText = { content: '© Your Brand', font: 'Arial', color: '#ffffff', bold: true, italic: false, strokeColor: '#000000', strokeWidth: 0, shadowBlur: 0 };
-const defaultSettings = { mode: 'image', opacity: .75, scale: 25, rotation: 0, position: 'bottom-right', customPosition: { x: .5, y: .5 }, tile: false, outputFormat: 'png', quality: 85, prefix: 'watermarked', text: defaultText };
+const defaultSettings = { mode: 'image', opacity: .75, scale: 25, rotation: 0, position: 'bottom-right', customPosition: { x: .5, y: .5 }, tile: false, outputFormat: 'jpeg', quality: 95, prefix: 'watermarked', text: defaultText };
 
 function readImage(file) {
   if ('createImageBitmap' in window) {
@@ -62,7 +62,14 @@ function Preview({ item, settings, watermark, onClick, onPointerDown, onPointerM
 }
 
 function Range({ label, value, suffix = '', min, max, step, onChange }) {
-  return <label className="field range-field"><span>{label}<b>{value}{suffix}</b></span><input type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(Number(e.target.value))} /></label>;
+  const [local, setLocal] = useState(value);
+  useEffect(() => { setLocal(value); }, [value]);
+  useEffect(() => {
+    if (local === value) return;
+    const t = setTimeout(() => onChange(local), 50);
+    return () => clearTimeout(t);
+  }, [local, onChange, value]);
+  return <label className="field range-field"><span>{label}<b>{local}{suffix}</b></span><input type="range" min={min} max={max} step={step} value={local} onChange={e => setLocal(Number(e.target.value))} /></label>;
 }
 
 function App() {
@@ -83,14 +90,24 @@ function App() {
 
   const patchSettings = patch => setSettings(current => ({ ...current, ...patch }));
   const addFiles = async fileList => {
-    const loaded = await Promise.all([...fileList].filter(file => file.type.startsWith('image/')).map(async file => {
-      const { url, image, width, height } = await readImage(file);
-      return { id: crypto.randomUUID(), file, url, image, width, height, name: file.name, ...settings, text: { ...settings.text } };
-    }));
+    const promises = [...fileList].filter(file => file.type.startsWith('image/')).map(async file => {
+      try {
+        const { url, image, width, height } = await readImage(file);
+        return { id: crypto.randomUUID(), file, url, image, width, height, name: file.name, ...settings, text: { ...settings.text } };
+      } catch (err) {
+        console.error('Failed to load image:', file.name, err);
+        return null;
+      }
+    });
+    const loaded = (await Promise.all(promises)).filter(Boolean);
     setItems(current => [...current, ...loaded]);
   };
   const applyAll = () => setItems(current => current.map(item => ({ ...item, ...settings, text: { ...settings.text }, wmBox: undefined })));
-  const remove = id => setItems(current => current.filter(item => item.id !== id));
+  const remove = id => setItems(current => {
+    const item = current.find(i => i.id === id);
+    if (item) URL.revokeObjectURL(item.url);
+    return current.filter(i => i.id !== id);
+  });
   const clear = () => { items.forEach(item => URL.revokeObjectURL(item.url)); setItems([]); };
   const savePreset = () => { if (!presetName.trim()) return; const next = [...presets, { name: presetName.trim(), settings, watermarkFile }]; setPresets(next); localStorage.setItem('pixelguard-presets', JSON.stringify(next.map(({ watermarkFile: _, ...preset }) => preset))); setPresetName(''); };
   const updateItem = (id, patch) => setItems(current => current.map(item => item.id === id ? { ...item, ...patch, text: patch.text || item.text } : item));
@@ -121,21 +138,48 @@ function App() {
 
   const exportBatch = async () => {
     if (!items.length || !hasMark) return;
-    const worker = new Worker(new URL('./export.worker.js', import.meta.url), { type: 'module' });
-    const files = {}; let completed = 0;
     setProgress({ completed: 0, total: items.length, label: 'Rendering images...' });
-    const results = items.map(item => new Promise((resolve, reject) => {
-      const handle = event => { if (event.data.id !== item.id) return; worker.removeEventListener('message', handle); if (event.data.error) reject(new Error(event.data.error)); else resolve(event.data.blob); };
-      worker.addEventListener('message', handle);
-      worker.postMessage({ file: item.file, watermarkFile: settings.mode === 'image' ? watermarkFile : null, item: { ...item, ...settings, text: settings.text }, outputFormat: settings.outputFormat, quality: settings.quality / 100 });
-    }).then(blob => { completed += 1; setProgress({ completed, total: items.length, label: `Rendered ${completed}/${items.length}` }); return [item, blob]; }));
+    
+    const concurrency = Math.min(navigator.hardwareConcurrency || 4, 8);
+    const workers = Array.from({ length: concurrency }, () => new Worker(new URL('./export.worker.js', import.meta.url), { type: 'module' }));
+    
+    const files = {};
+    let completed = 0;
+    let index = 0;
+    
+    const processNext = (worker) => {
+      if (index >= items.length) return Promise.resolve();
+      const item = items[index++];
+      return new Promise((resolve, reject) => {
+        const handle = event => {
+          if (event.data.id !== item.id) return;
+          worker.removeEventListener('message', handle);
+          if (event.data.error) reject(new Error(event.data.error));
+          else resolve([item, event.data.blob]);
+        };
+        worker.addEventListener('message', handle);
+        worker.postMessage({ file: item.file, watermarkFile: settings.mode === 'image' ? watermarkFile : null, item: { ...item, ...settings, text: settings.text }, outputFormat: settings.outputFormat, quality: settings.quality / 100 });
+      }).then(async ([processedItem, blob]) => {
+        files[`${settings.prefix || 'watermarked'}-${stripExt(processedItem.name)}.${settings.outputFormat === 'jpeg' ? 'jpg' : settings.outputFormat}`] = new Uint8Array(await blob.arrayBuffer());
+        completed += 1;
+        setProgress({ completed, total: items.length, label: `Rendered ${completed}/${items.length}` });
+        return processNext(worker);
+      });
+    };
+
     try {
-      for (const [item, blob] of await Promise.all(results)) files[`${settings.prefix || 'watermarked'}-${stripExt(item.name)}.${settings.outputFormat === 'jpeg' ? 'jpg' : settings.outputFormat}`] = new Uint8Array(await blob.arrayBuffer());
+      await Promise.all(workers.map(worker => processNext(worker)));
+      setProgress({ completed: items.length, total: items.length, label: 'Zipping files...' });
       const archive = zipSync(files, { level: 6 });
       const url = URL.createObjectURL(new Blob([archive], { type: 'application/zip' }));
-      const link = document.createElement('a'); link.href = url; link.download = `${settings.prefix || 'watermarked'}-batch.zip`; link.click(); URL.revokeObjectURL(url); setProgress({ completed: items.length, total: items.length, label: 'Export complete' });
-    } catch (error) { setProgress({ completed: 0, total: items.length, label: error.message }); }
-    worker.terminate(); setTimeout(() => setProgress(null), 1600);
+      const link = document.createElement('a'); link.href = url; link.download = `${settings.prefix || 'watermarked'}-batch.zip`; link.click(); URL.revokeObjectURL(url);
+      setProgress({ completed: items.length, total: items.length, label: 'Export complete' });
+    } catch (error) {
+      setProgress({ completed: 0, total: items.length, label: error.message });
+    } finally {
+      workers.forEach(w => w.terminate());
+      setTimeout(() => setProgress(null), 1600);
+    }
   };
   const downloadOne = async item => {
     const worker = new Worker(new URL('./export.worker.js', import.meta.url), { type: 'module' });
